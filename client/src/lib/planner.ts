@@ -338,7 +338,7 @@ export function applyAction(ev: PlanEvent, key: ActionKey, extraIdeas?: NewIdea[
   if (key === 'guests') {
     if (ev.reminded) return '';
     ev.reminded = true;
-    return `Reminder queued for ${counts(ev).wait} ${ev.type === 'community' ? 'contacts' : 'guests'}`;
+    return `Reminder marked as queued for ${counts(ev).wait} ${ev.type === 'community' ? 'contacts' : 'guests'}. Nothing was sent: sending is coming soon.`;
   }
   if (key === 'ideas') {
     if (ev.applied.ideas) return '';
@@ -395,8 +395,8 @@ export function respondLocally(ev: PlanEvent, text: string): Reply {
   }
   if (has('rsvp', 'guest', 'invite', 'attend', 'remind', 'headcount')) {
     const t = `${c.yes} attending, ${c.no} declined, ${c.wait} yet to reply.`;
-    if (!ev.reminded && c.wait) return { text: t + `\n\nDraft reminder:\n“${reminder(ev)}”`, action: 'guests', label: 'Queue reminder' };
-    return { text: t + (ev.reminded ? ' A reminder is already queued.' : '') };
+    if (!ev.reminded && c.wait) return { text: t + `\n\nDraft reminder:\n“${reminder(ev)}”\n\nNote: the app doesn’t send messages yet. Queueing only marks it; sending by WhatsApp or messaging is coming.`, action: 'guests', label: 'Queue reminder' };
+    return { text: t + (ev.reminded ? ' A reminder is already marked as queued. Nothing was sent: sending is coming soon.' : '') };
   }
   if (has('idea', 'theme', 'decor', 'inspir', 'menu', 'vibe', 'activit')) {
     if (!ev.applied.ideas) return { text: `Three directions based on “${ev.vibe}”:\n` + POOL[ev.type].map((p, k) => `${k + 1}. ${p[0]}: ${p[2]}`).join('\n'), action: 'ideas', label: 'Save to idea board' };
