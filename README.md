@@ -158,6 +158,18 @@ It runs five steps:
 
 Re-running it is safe: later runs redeploy both sides and keep the existing sign-in keys.
 
+## Deploy on every push (CI/CD)
+
+`.github/workflows/deploy.yml` deploys on every push to `main`: it typechecks, deploys the Convex functions to production, then deploys to Cloud Run (the same steps as `./deploy.sh`). It signs in to Google Cloud with Workload Identity Federation, so no key file is stored anywhere. You can also run it by hand from the repo's **Actions** tab.
+
+One-time setup:
+
+1. Run `./deploy.sh` once by hand. It creates the Cloud Run service, the Convex production deployment and the sign-in keys, which the pipeline doesn't do. Also set the Places key on production: `npx convex env set GOOGLE_PLACES_API_KEY <key> --prod`.
+2. Run `./scripts/setup-cd.sh`. It creates a deployer service account and a Workload Identity pool that only trusts this GitHub repository, and prints three values.
+3. In GitHub, **Settings > Secrets and variables > Actions**: add the **variables** `GCP_PROJECT_ID`, `GCP_WIF_PROVIDER`, `GCP_DEPLOY_SA` (from step 2) and the **secret** `CONVEX_DEPLOY_KEY` (a production deploy key from the Convex dashboard).
+
+Until the three variables exist the deploy job is skipped, so pushes stay safe. Every deploy runs a Cloud Build; the free tier covers a normal amount of pushing.
+
 ## Assumptions
 
 - Events are limited to a few Pune areas to keep Places usage and cost small. To add an area or category, edit `shared/areas.ts` and run the seed again.

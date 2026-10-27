@@ -66,4 +66,5 @@ Why it is built this way:
 - TypeScript strict, ESM (`"type": "module"`). Server imports use the `.js` extension (`'../services/vertexAi.js'`).
 - Keep the existing comment style: short, explain why, no banners.
 - Don't commit secrets. Local env is in `.env` and `.env.local` (`VITE_CONVEX_URL` is written by `npx convex dev`). Places and Convex keys are set with `npx convex env set`, not in files.
+- Pushing to `main` deploys automatically through `.github/workflows/deploy.yml` once the one-time setup in the README ("CI/CD") is done, so don't push broken code to `main`. The job is skipped while the `GCP_*` repository variables are unset.
 - Deployment is `./deploy.sh` (Convex production plus Cloud Run in asia-south1). It prompts before doing anything.

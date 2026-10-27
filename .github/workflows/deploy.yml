@@ -1,0 +1,68 @@
+# Deploys PlanWell.AI on every push to main: Convex functions first, then Cloud Run.
+# One-time setup (Google Cloud access and GitHub settings): see "CI/CD" in README.md.
+# The deploy job stays skipped until the GCP_* repository variables exist.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # lets the job get a short-lived Google credential, so no key file is stored
+
+env:
+  SERVICE: planwell-ai
+  REGION: asia-south1 # Cloud Run region
+  GCP_LOCATION: global # Vertex AI location for Gemini
+
+jobs:
+  deploy:
+    if: ${{ vars.GCP_PROJECT_ID != '' && vars.GCP_WIF_PROVIDER != '' && vars.GCP_DEPLOY_SA != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Deploy Convex functions to production
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          test -n "$CONVEX_DEPLOY_KEY" || { echo "::error::Add the CONVEX_DEPLOY_KEY secret (a production deploy key)."; exit 1; }
+          npx convex deploy --cmd 'printenv CONVEX_URL > .convex-prod-url' --cmd-url-env-var-name CONVEX_URL
+          echo "CONVEX_URL=$(tr -d '[:space:]' < .convex-prod-url)" >> "$GITHUB_ENV"
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        run: |
+          PROJECT_NUMBER="$(gcloud projects describe '${{ vars.GCP_PROJECT_ID }}' --format='value(projectNumber)')"
+          gcloud run deploy "$SERVICE" \
+            --project '${{ vars.GCP_PROJECT_ID }}' \
+            --region "$REGION" \
+            --source . \
+            --allow-unauthenticated \
+            --service-account "${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+            --memory 512Mi \
+            --set-env-vars "GCP_PROJECT_ID=${{ vars.GCP_PROJECT_ID }},GCP_LOCATION=${GCP_LOCATION},CONVEX_URL=${CONVEX_URL}"
+          echo "Live at: $(gcloud run services describe "$SERVICE" --project '${{ vars.GCP_PROJECT_ID }}' --region "$REGION" --format='value(status.url)')"
