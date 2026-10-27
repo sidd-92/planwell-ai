@@ -166,11 +166,11 @@ One-time setup:
 
 1. Run `./deploy.sh` once by hand. It creates the Cloud Run service, the Convex production deployment and the sign-in keys, which the pipeline doesn't do. Also set the Places key on production: `npx convex env set GOOGLE_PLACES_API_KEY <key> --prod`.
 2. Run `./scripts/setup-cd.sh`. It creates a deployer service account and a Workload Identity pool that only trusts this GitHub repository, and prints three values.
-3. In GitHub, **Settings > Secrets and variables > Actions**: add the **variables** `GCP_PROJECT_ID`, `GCP_WIF_PROVIDER`, `GCP_DEPLOY_SA` (from step 2) and the **secret** `CONVEX_DEPLOY_KEY` (a production deploy key from the Convex dashboard).
+3. In GitHub, create an environment named **`prod`** (**Settings > Environments**) and add to it the **variables** `GCP_PROJECT_ID`, `GCP_WIF_PROVIDER`, `GCP_DEPLOY_SA` (from step 2) and the **secret** `CONVEX_DEPLOY_KEY` (a production deploy key from the Convex dashboard).
 
 **How to work with it:** make changes on a branch, open a pull request into `main` and let the CI workflow (`.github/workflows/ci.yml`: typecheck and build) pass, test it, then merge. The merge is the release: it triggers the deploy. Don't push to `main` directly.
 
-Until the three variables exist the deploy job is skipped, so pushes stay safe. Every deploy runs a Cloud Build; the free tier covers a normal amount of pushing.
+The deploy job runs in the `prod` environment. In that environment's settings, set **Deployment branches** to `main` only, so a branch can't deploy to production. Every deploy runs a Cloud Build; the free tier covers a normal amount of pushing.
 
 ## Assumptions
 
