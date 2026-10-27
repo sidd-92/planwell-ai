@@ -1,4 +1,4 @@
-import type { ActionKey, Currency, EventType } from '../../shared/api';
+import type { ActionKey, Currency, EventType, IdeaPlan } from '../../shared/api';
 
 export type { ActionKey, Currency, EventType };
 
@@ -67,8 +67,13 @@ export interface Idea {
   desc: string;
   /** Indices into the swatch palette. */
   sw: number[];
+  /** Shortlisted for the client. */
   saved: boolean;
   fresh?: boolean;
+  /** Worked into the plan (tasks added, budget changed if the planner chose to). */
+  added?: boolean;
+  /** The planner chose to decide later; the proposal is kept so it can be reopened. */
+  later?: IdeaPlan;
 }
 
 export interface ChatMsg {
