@@ -1,0 +1,12 @@
+# Files not uploaded to Cloud Build by `gcloud run deploy --source .`
+.gcloudignore
+.git
+.gitignore
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.convex-prod-url
+*.log
+.DS_Store
