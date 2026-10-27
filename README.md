@@ -55,7 +55,7 @@ npx convex run vendorDirectory:seed '{"only":"Rentals"}'     # optional: one cat
 
 ### Sign-in (Convex Auth, email + password)
 
-- `convex/auth.ts` uses the **Password** provider only: no social logins and no email verification. **Create account** registers the email with the password and signs the user in; **Sign in** checks the password. Passwords are hashed with Scrypt by Convex Auth, and must be 8–128 characters.
+- `convex/auth.ts` uses the **Password** provider only: no social logins and no email verification. **Create account** registers the email with the password and signs the user in; **Sign in** checks the password. Passwords are hashed with Scrypt by Convex Auth, and must be 8–128 characters. **Forgot password** emails a 6-digit code (valid 15 minutes) through Resend, then sets a new password. Set `AUTH_RESEND_KEY` (and optionally `AUTH_EMAIL_FROM`) with `npx convex env set` on each deployment; without a verified Resend domain, mail only reaches the Resend account owner.
 - Signed-out visitors see only the sign-in screen. Every Convex query and mutation requires a session.
 - The Gemini endpoints (`/api/plan`, `/api/chat`, `/api/ideas`) also require sign-in: the browser sends its Convex Auth token, and Express verifies it against the deployment's public keys (`/.well-known/jwks.json`, issuer = the Convex site URL, audience `convex`) before calling Vertex AI. See `server/auth.ts`.
 
