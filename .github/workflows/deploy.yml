@@ -1,6 +1,6 @@
 # Deploys PlanWell.AI on every push to main: Convex functions first, then Cloud Run.
 # One-time setup (Google Cloud access and GitHub settings): see "CI/CD" in README.md.
-# The deploy job stays skipped until the GCP_* repository variables exist.
+# The variables and the Convex secret live in the GitHub environment "prod".
 name: Deploy
 
 on:
@@ -23,7 +23,7 @@ env:
 
 jobs:
   deploy:
-    if: ${{ vars.GCP_PROJECT_ID != '' && vars.GCP_WIF_PROVIDER != '' && vars.GCP_DEPLOY_SA != '' }}
+    environment: prod # where GCP_PROJECT_ID, GCP_WIF_PROVIDER, GCP_DEPLOY_SA and CONVEX_DEPLOY_KEY are stored
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

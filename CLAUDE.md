@@ -67,5 +67,5 @@ Why it is built this way:
 - Keep the existing comment style: short, explain why, no banners.
 - Don't commit secrets. Local env is in `.env` and `.env.local` (`VITE_CONVEX_URL` is written by `npx convex dev`). Places and Convex keys are set with `npx convex env set`, not in files.
 - Work on a branch and merge through a pull request; CI (`.github/workflows/ci.yml`) typechecks and builds every PR. Don't commit straight to `main`.
-- Pushing to `main` deploys automatically through `.github/workflows/deploy.yml` once the one-time setup in the README ("CI/CD") is done, so don't push broken code to `main`. The job is skipped while the `GCP_*` repository variables are unset.
+- Pushing to `main` deploys automatically through `.github/workflows/deploy.yml` once the one-time setup in the README ("CI/CD") is done, so don't push broken code to `main`. The job runs in the GitHub environment `prod`, which holds the `GCP_*` variables and the `CONVEX_DEPLOY_KEY` secret.
 - Deployment is `./deploy.sh` (Convex production plus Cloud Run in asia-south1). It prompts before doing anything.
