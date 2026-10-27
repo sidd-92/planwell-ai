@@ -337,7 +337,7 @@ export default function App({ store, user, onSignOut }: { store: EventStore; use
           {screen === 'vendors' && <VendorsView ev={ev} mutate={mutate} onNotify={toast} />}
           {screen === 'guests' && <GuestsView key={ev.id} ev={ev} mutate={mutate} onNotify={toast} />}
           {screen === 'volunteers' && <VolunteersView key={ev.id} ev={ev} mutate={mutate} onNotify={toast} />}
-          {screen === 'ideas' && <IdeasView ev={ev} mutate={mutate} />}
+          {screen === 'ideas' && <IdeasView ev={ev} mutate={mutate} ai={ai} onNotify={toast} />}
         </div>
       </main>
 

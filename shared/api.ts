@@ -80,6 +80,19 @@ export interface IdeasResponse {
   ideas: { title: string; category: IdeaCategory; description: string }[];
 }
 
+/** An idea worked into the plan: what to do, roughly what it costs, and which budget line it sits under. */
+export interface IdeaPlan {
+  tasks: { t: string; due: string }[]; // due is YYYY-MM-DD
+  cost: number;
+  line: string;
+  rationale: string;
+}
+
+export interface IdeaPlanRequest {
+  event: EventContext;
+  idea: { title: string; category: string; description: string };
+}
+
 export interface HealthResponse {
   ok: true;
   ai: boolean;

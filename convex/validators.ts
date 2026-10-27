@@ -54,6 +54,13 @@ const idea = v.object({
   sw: v.array(v.number()),
   saved: v.boolean(),
   fresh: v.optional(v.boolean()),
+  added: v.optional(v.boolean()),
+  later: v.optional(v.object({
+    tasks: v.array(v.object({ t: v.string(), due: v.string() })),
+    cost: v.number(),
+    line: v.string(),
+    rationale: v.string(),
+  })),
 });
 
 const actionKey = v.union(v.literal('budget'), v.literal('timeline'), v.literal('vendors'), v.literal('guests'), v.literal('ideas'));

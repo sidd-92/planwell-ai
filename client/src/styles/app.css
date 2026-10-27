@@ -145,3 +145,9 @@ a:hover { color: var(--color-accent-600); }
 .menu-item { appearance: none; border: 0; background: transparent; font: inherit; font-size: 14px; text-align: left; color: var(--color-text); padding: 8px 12px; border-radius: calc(var(--radius-md) - 4px); cursor: pointer; }
 .menu-item:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
 .menu-item.primary { font-weight: 600; color: var(--color-accent); }
+
+/* printable ideas shortlist */
+.print-idea { break-inside: avoid; padding: 14px 0; border-bottom: 1px solid #bbb; }
+.print-kicker { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #777; }
+.print-idea-title { font-size: 18px; font-weight: 700; margin: 2px 0 4px; }
+.print-idea-body { margin: 0; font-size: 14px; color: #333; line-height: 1.5; }
