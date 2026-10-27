@@ -168,6 +168,8 @@ One-time setup:
 2. Run `./scripts/setup-cd.sh`. It creates a deployer service account and a Workload Identity pool that only trusts this GitHub repository, and prints three values.
 3. In GitHub, **Settings > Secrets and variables > Actions**: add the **variables** `GCP_PROJECT_ID`, `GCP_WIF_PROVIDER`, `GCP_DEPLOY_SA` (from step 2) and the **secret** `CONVEX_DEPLOY_KEY` (a production deploy key from the Convex dashboard).
 
+**How to work with it:** make changes on a branch, open a pull request into `main` and let the CI workflow (`.github/workflows/ci.yml`: typecheck and build) pass, test it, then merge. The merge is the release: it triggers the deploy. Don't push to `main` directly.
+
 Until the three variables exist the deploy job is skipped, so pushes stay safe. Every deploy runs a Cloud Build; the free tier covers a normal amount of pushing.
 
 ## Assumptions
