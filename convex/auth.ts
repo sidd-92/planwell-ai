@@ -1,15 +1,12 @@
 import { convexAuth } from '@convex-dev/auth/server';
 import { Password } from '@convex-dev/auth/providers/Password';
 import { ConvexError } from 'convex/values';
-import { ResetEmail } from './ResetEmail';
 
 // Plain email + password accounts. No social logins and no email verification:
 // signing up registers the email with the given password and signs the user in.
-// Forgot password emails a one-time code (see ResetEmail.ts).
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Password({
-      reset: ResetEmail,
       profile(params) {
         const email = String(params.email ?? '').trim().toLowerCase();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
