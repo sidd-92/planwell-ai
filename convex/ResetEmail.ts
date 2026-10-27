@@ -27,6 +27,10 @@ export const ResetEmail = Email({
         text: `Your code is ${token}. It expires in 15 minutes.\n\nIf you didn't ask to reset your password, ignore this email.`,
       }),
     });
-    if (!res.ok) throw new ConvexError('Couldn’t send the reset email.');
+    if (!res.ok) {
+      // Resend's reason (bad key, unverified domain) only goes to the server log.
+      console.error(`Resend ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      throw new ConvexError('Couldn’t send the reset email.');
+    }
   },
 });
