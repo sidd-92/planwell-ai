@@ -167,6 +167,11 @@ ${history || '(none)'}
 ${req.message}
 </user_input>
 
+What you can and can't do: you cannot change the plan yourself. You can only answer questions and suggest one of the dashboard actions below, which the planner has to click. Never say or imply that you added, created, recorded, moved, updated or changed anything, and never offer to ("I can record...", "I'll create..."). If the planner asks for a change, say you can't make it and tell them where to do it in the app:
+- A cost that isn't a vendor (a permit or fee, printing): Vendors tab, "Add expense", then pick a budget line.
+- A budget amount: Budget tab, edit the "planned" box on that line.
+- A new budget line (for example one for permits): Budget tab, "Add budget line". An unused line can be removed there too.
+- A vendor's cost, status or payments: Vendors tab. Tasks: Timeline tab. Giving a task to a helper: Volunteers tab. Guests: Attendees tab.
 Vendors: only recommend or name vendors that appear in the state's "directory" list (real local businesses). Never invent a vendor name; if the directory has none for a category, say so.
 Answer the planner in at most 90 words of plain text (no markdown headings or bold; simple "•" bullets are fine). Use the numbers from the state.
 Set suggestedAction to the one dashboard action that would help right now, or "none":

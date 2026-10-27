@@ -30,6 +30,19 @@ export function TimelineView({ ev, mutate }: { ev: PlanEvent; mutate: Mutate }) 
                 </button>
                 <span style={{ flex: 1, minWidth: 0, fontSize: 14, textDecoration: t.done ? 'line-through' : 'none', opacity: t.done ? 0.55 : 1 }}>{t.t}</span>
                 {t.ai && <span className="tag tag-accent-2">Suggested</span>}
+                {(ev.helpers?.length ?? 0) > 0 && (
+                  <select
+                    className="input"
+                    aria-label={`Assign “${t.t}”`}
+                    title="Assign to a volunteer. They aren't notified by the app."
+                    value={ev.helpers!.some((h) => h.id === t.assignee) ? t.assignee : ''}
+                    onChange={(e) => { const id = e.target.value; mutate((x) => { const y = x.phases[pi].tasks[ti]; if (id) y.assignee = id; else delete y.assignee; }); }}
+                    style={{ padding: '2px 8px', fontSize: 12, maxWidth: 130 }}
+                  >
+                    <option value="">Unassigned</option>
+                    {ev.helpers!.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
+                  </select>
+                )}
                 <span className="text-muted num" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{t.due}</span>
               </div>
             ))}

@@ -15,6 +15,7 @@ import { BudgetView } from './components/BudgetView';
 import { TimelineView } from './components/TimelineView';
 import { VendorsView } from './components/VendorsView';
 import { GuestsView } from './components/GuestsView';
+import { VolunteersView } from './components/VolunteersView';
 import { IdeasView } from './components/IdeasView';
 import { Assistant } from './components/Assistant';
 import { Onboarding } from './components/Onboarding';
@@ -29,7 +30,7 @@ export interface AiStatus {
   model: string;
 }
 
-const TABS: [Screen, string][] = [['overview', 'Overview'], ['budget', 'Budget'], ['timeline', 'Timeline'], ['vendors', 'Vendors'], ['guests', 'Guests'], ['ideas', 'Ideas']];
+const TABS: [Screen, string][] = [['overview', 'Overview'], ['budget', 'Budget'], ['timeline', 'Timeline'], ['vendors', 'Vendors'], ['guests', 'Guests'], ['volunteers', 'Volunteers'], ['ideas', 'Ideas']];
 
 /** Which assistant message is mid-way through the typing effect (never saved). */
 interface Reveal {
@@ -331,10 +332,11 @@ export default function App({ store, user, onSignOut }: { store: EventStore; use
           )}
 
           {screen === 'overview' && <Overview ev={ev} mutate={mutate} go={go} guestTab={guestTab} weeks={weeks} />}
-          {screen === 'budget' && <BudgetView ev={ev} mutate={mutate} />}
+          {screen === 'budget' && <BudgetView ev={ev} mutate={mutate} onNotify={toast} />}
           {screen === 'timeline' && <TimelineView key={ev.id} ev={ev} mutate={mutate} />}
           {screen === 'vendors' && <VendorsView ev={ev} mutate={mutate} onNotify={toast} />}
           {screen === 'guests' && <GuestsView key={ev.id} ev={ev} mutate={mutate} onNotify={toast} />}
+          {screen === 'volunteers' && <VolunteersView key={ev.id} ev={ev} mutate={mutate} onNotify={toast} />}
           {screen === 'ideas' && <IdeasView ev={ev} mutate={mutate} />}
         </div>
       </main>

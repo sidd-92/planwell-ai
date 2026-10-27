@@ -44,7 +44,7 @@ function BrowsePanel({ ev, index, mutate, onClose }: { ev: PlanEvent; index: num
       ) : list.length === 0 ? (
         <p className="text-muted" style={{ fontSize: 13 }}>
           {search === 'error'
-            ? 'Couldn’t search just now. Try again later, or type a vendor into the row yourself.'
+            ? 'Couldn’t search just now. Try again later, or click the Vendor cell in the row to type one in yourself.'
             : search === 'done'
               ? `No well-rated ${row.cat.toLowerCase()} found near ${area}.`
               : `Searching for ${row.cat.toLowerCase()} near ${area}…`}
@@ -289,7 +289,19 @@ export function VendorsView({ ev, mutate, onNotify }: { ev: PlanEvent; mutate: M
             {rows.map(({ v, i }) => (
               <tr key={v.cat + i}>
                 <td style={{ fontWeight: 600 }}>{v.cat}{v.expense && <> <span className="tag tag-outline" style={{ fontWeight: 400, fontSize: 11 }}>Expense</span></>}</td>
-                <td>{v.name}</td>
+                <td>
+                  {isPaid(v) ? v.name : (
+                    <Cell
+                      value={v.name}
+                      label={v.expense ? 'Paid to' : 'Vendor'}
+                      onCommit={(t) => mutate((e) => {
+                        const x = e.vendors[i];
+                        x.name = t || '—';
+                        if (t && !x.expense && x.status === 'To find') x.status = 'Shortlisted'; // a named vendor is at least shortlisted
+                      })}
+                    />
+                  )}
+                </td>
                 <td>
                   <StatusMenu v={v} onStep={(dir) => mutate((e) => { stepVendor(e, i, dir); })} onPay={(kind) => setPay({ index: i, kind })} onRemove={() => setRemoving(i)} />
                 </td>
@@ -318,7 +330,9 @@ export function VendorsView({ ev, mutate, onNotify }: { ev: PlanEvent; mutate: M
                     {ev.budget.map((b) => <option key={b.cat} value={b.cat}>{b.cat}</option>)}
                   </select>
                 </td>
-                <td className="text-muted" style={{ fontSize: 13 }}>{v.next}</td>
+                <td className="text-muted" style={{ fontSize: 13 }}>
+                  {isPaid(v) ? v.next : <Cell value={v.next} label="Next step" onCommit={(t) => mutate((e) => { e.vendors[i].next = t; })} />}
+                </td>
                 <td>{!isPaid(v) && !v.expense && <button className="btn btn-ghost" onClick={() => setBrowsing(i)}>Browse</button>}</td>
               </tr>
             ))}

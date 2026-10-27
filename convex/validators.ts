@@ -8,7 +8,10 @@ const task = v.object({
   due: v.string(),
   done: v.boolean(),
   ai: v.optional(v.boolean()),
+  assignee: v.optional(v.string()),
 });
+
+const helper = v.object({ id: v.string(), name: v.string(), contact: v.optional(v.string()) });
 
 const phase = v.object({
   label: v.string(),
@@ -84,4 +87,5 @@ export const eventData = v.object({
   reminded: v.boolean(),
   chat: v.array(chatMsg),
   aiDrafted: v.optional(v.boolean()),
+  helpers: v.optional(v.array(helper)),
 });

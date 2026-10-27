@@ -2,13 +2,15 @@ import type { ActionKey, Currency, EventType } from '../../shared/api';
 
 export type { ActionKey, Currency, EventType };
 
-export type Screen = 'overview' | 'budget' | 'timeline' | 'vendors' | 'guests' | 'ideas';
+export type Screen = 'overview' | 'budget' | 'timeline' | 'vendors' | 'guests' | 'volunteers' | 'ideas';
 
 export interface Task {
   t: string;
   due: string;
   done: boolean;
   ai?: boolean;
+  /** The volunteer (Helper id) this task is assigned to. */
+  assignee?: string;
 }
 
 export interface Phase {
@@ -77,6 +79,13 @@ export interface ChatMsg {
   done?: boolean;
 }
 
+/** A friend or relative helping out. They aren't notified by the app. */
+export interface Helper {
+  id: string;
+  name: string;
+  contact?: string;
+}
+
 export interface PlanEvent {
   id: string;
   type: EventType;
@@ -100,6 +109,7 @@ export interface PlanEvent {
   reminded: boolean;
   chat: ChatMsg[];
   aiDrafted?: boolean;
+  helpers?: Helper[];
 }
 
 export interface Onboarding {

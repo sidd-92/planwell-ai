@@ -1,6 +1,6 @@
 import type { EventContext, GeneratedPlan, IdeaCategory } from '../../../shared/api';
 import { AI_TASKS, POOL, SHORT, seedEvents } from '../data/seed';
-import type { ActionKey, BudgetLine, Currency, Idea, Onboarding, Phase, PlanEvent, Vendor } from '../types';
+import type { ActionKey, BudgetLine, Currency, Helper, Idea, Onboarding, Phase, PlanEvent, Vendor } from '../types';
 
 // ── dates & money ─────────────────────────────────────────────────────────
 
@@ -92,6 +92,70 @@ export function reminder(ev: PlanEvent, now = new Date()): string {
   const by = new Date(Math.max(+d - 28 * DAY, +now + 7 * DAY));
   const long: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric' };
   return `Hi! ${ev.host} would love to know if you can make it on ${dfmt(ev.date, long)}. Please reply by ${dfmt(by, long)} so we can confirm final numbers.`;
+}
+
+// ── budget lines ──────────────────────────────────────────────────────────
+
+/** Adds a budget line, keeping a reserve line (Contingency) last. Returns an error message, or '' when added. */
+export function addBudgetLine(ev: PlanEvent, name: string, alloc: number): string {
+  const cat = name.trim().replace(/\s+/g, ' ').slice(0, 80);
+  if (!cat) return 'Enter a name for the budget line.';
+  if (ev.budget.some((b) => b.cat.toLowerCase() === cat.toLowerCase())) return `There is already a line called “${cat}”.`;
+  if (ev.budget.length >= 40) return 'A budget can have up to 40 lines.';
+  const line: BudgetLine = { cat, alloc: Math.max(0, Math.round(alloc) || 0), spent: 0 };
+  const reserve = ev.budget.findIndex(isReserve);
+  if (reserve >= 0 && reserve === ev.budget.length - 1) ev.budget.splice(reserve, 0, line);
+  else ev.budget.push(line);
+  return '';
+}
+
+/** Removes a budget line that has nothing committed to it. Vendors pointed at it go back to matching by name. */
+export function removeBudgetLine(ev: PlanEvent, i: number): string {
+  const line = ev.budget[i];
+  if (!line) return '';
+  if (line.spent > 0) return 'Money is committed to this line. Move or remove those costs first.';
+  if (ev.budget.length <= 1) return 'A budget needs at least one line.';
+  ev.vendors.forEach((v) => { if (v.line === line.cat) delete v.line; });
+  ev.budget.splice(i, 1);
+  return '';
+}
+
+// ── volunteers ────────────────────────────────────────────────────────────
+
+/** Tasks assigned to a volunteer, with where they sit in the timeline. */
+export function helperTasks(ev: PlanEvent, id: string) {
+  return ev.phases.flatMap((p, pi) => p.tasks.map((t, ti) => ({ t, pi, ti })).filter((x) => x.t.assignee === id));
+}
+
+export function addHelper(ev: PlanEvent, name: string, contact: string): string {
+  const n = name.trim().slice(0, 60);
+  if (!n) return 'Enter a name.';
+  const helpers = (ev.helpers ??= []);
+  if (helpers.length >= 100) return 'An event can have up to 100 volunteers.';
+  if (helpers.some((h) => h.name.toLowerCase() === n.toLowerCase())) return `${n} is already a volunteer.`;
+  helpers.push({ id: 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: n, contact: contact.trim().slice(0, 40) || undefined });
+  return '';
+}
+
+/** Removes a volunteer and unassigns their tasks. */
+export function removeHelper(ev: PlanEvent, id: string) {
+  ev.phases.forEach((p) => p.tasks.forEach((t) => { if (t.assignee === id) delete t.assignee; }));
+  ev.helpers = (ev.helpers ?? []).filter((h) => h.id !== id);
+}
+
+/** A message the planner can paste into WhatsApp or SMS. The app doesn't send it. */
+export function helperMessage(ev: PlanEvent, h: Helper): string {
+  const open = helperTasks(ev, h.id).filter((x) => !x.t.done);
+  const when = dfmt(ev.date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const lines = open.length ? open.map((x) => `• ${x.t.t}${x.t.due && x.t.due !== '—' ? ` (by ${x.t.due})` : ''}`).join('\n') : 'You have no open tasks right now.';
+  return `Hi ${h.name}! Thank you for helping with ${ev.name} on ${when}${ev.location ? ` (${ev.location})` : ''}.\n\nYour tasks:\n${lines}`;
+}
+
+/** A WhatsApp link with the message filled in, or null when the number isn't usable. 10-digit numbers are taken as Indian. */
+export function whatsappUrl(contact: string | undefined, text: string): string | null {
+  let digits = (contact ?? '').replace(/\D/g, '');
+  if (digits.length === 10) digits = '91' + digits;
+  return digits.length >= 11 && digits.length <= 15 ? `https://wa.me/${digits}?text=${encodeURIComponent(text)}` : null;
 }
 
 // ── vendor costs and the budget ───────────────────────────────────────────

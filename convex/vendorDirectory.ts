@@ -1,7 +1,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
-import { action, internalAction, internalMutation, internalQuery, query } from './_generated/server';
+import { action, internalAction, internalMutation, internalQuery, query, type ActionCtx } from './_generated/server';
 import { PUNE_AREAS, VENDOR_CATEGORIES, searchTermFor } from '../shared/areas';
 
 /** Top three vendors per category for an area, best rated first. Includes categories looked up on demand. */
@@ -123,47 +123,57 @@ export const markLookup = internalMutation({
   },
 });
 
+async function lookUp(ctx: ActionCtx, args: { area: string; category: string }): Promise<{ found: number; cached: boolean }> {
+  const key = process.env.GOOGLE_PLACES_API_KEY;
+  if (!key) throw new Error('Vendor search is not configured.');
+  if (!(PUNE_AREAS as readonly string[]).includes(args.area)) throw new Error('Unsupported area.');
+  // Built-in types keep their exact key ("Rentals"); anything else is a cleaned, lower-case name.
+  const builtin = VENDOR_CATEGORIES.find((c) => c.key === args.category);
+  const category = builtin?.key ?? args.category.toLowerCase().replace(/[^a-z0-9 &,-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (!category) throw new Error('Missing category.');
+
+  const state = await ctx.runQuery(internal.vendorDirectory.lookupState, { area: args.area, category });
+  if (state.done) return { found: 0, cached: true };
+  if (state.total >= MAX_LOOKUPS) throw new Error('The vendor search limit has been reached.');
+
+  const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': key,
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.googleMapsUri',
+    },
+    body: JSON.stringify({ textQuery: `${searchTermFor(category)} in ${args.area}, Pune`, maxResultCount: 10, regionCode: 'IN' }),
+  });
+  if (!res.ok) throw new Error(`Places lookup failed (${res.status}): ${(await res.text()).slice(0, 200)}`);
+  const { places = [] } = (await res.json()) as { places?: Place[] };
+  let found = 0;
+  for (const p of places) {
+    if (!p.displayName || (p.rating ?? 0) < 4 || (p.userRatingCount ?? 0) < 10) continue;
+    await ctx.runMutation(internal.vendorDirectory.upsert, {
+      placeId: p.id, name: p.displayName.text, area: args.area, category, address: p.formattedAddress ?? '',
+      rating: p.rating ?? 0, ratingCount: p.userRatingCount ?? 0, phone: p.nationalPhoneNumber, mapsUri: p.googleMapsUri,
+    });
+    found++;
+  }
+  await ctx.runMutation(internal.vendorDirectory.markLookup, { area: args.area, category, found });
+  return { found, cached: false };
+}
+
 /**
  * Looks up one category in one area on Google Places the first time anyone asks for it, then serves it
  * from the directory. Used by the Browse panel for categories the up-front seed doesn't cover.
  */
 export const fetchCategory = action({
   args: { area: v.string(), category: v.string() },
-  handler: async (ctx, args): Promise<{ found: number; cached: boolean }> => {
+  handler: async (ctx, args) => {
     if (!(await ctx.auth.getUserIdentity())) throw new Error('Not signed in.');
-    const key = process.env.GOOGLE_PLACES_API_KEY;
-    if (!key) throw new Error('Vendor search is not configured.');
-    if (!(PUNE_AREAS as readonly string[]).includes(args.area)) throw new Error('Unsupported area.');
-    // Built-in types keep their exact key ("Rentals"); anything else is a cleaned, lower-case name.
-    const builtin = VENDOR_CATEGORIES.find((c) => c.key === args.category);
-    const category = builtin?.key ?? args.category.toLowerCase().replace(/[^a-z0-9 &,-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
-    if (!category) throw new Error('Missing category.');
-
-    const state = await ctx.runQuery(internal.vendorDirectory.lookupState, { area: args.area, category });
-    if (state.done) return { found: 0, cached: true };
-    if (state.total >= MAX_LOOKUPS) throw new Error('The vendor search limit has been reached.');
-
-    const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': key,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.googleMapsUri',
-      },
-      body: JSON.stringify({ textQuery: `${searchTermFor(category)} in ${args.area}, Pune`, maxResultCount: 10, regionCode: 'IN' }),
-    });
-    if (!res.ok) throw new Error(`Places lookup failed (${res.status}).`);
-    const { places = [] } = (await res.json()) as { places?: Place[] };
-    let found = 0;
-    for (const p of places) {
-      if (!p.displayName || (p.rating ?? 0) < 4 || (p.userRatingCount ?? 0) < 10) continue;
-      await ctx.runMutation(internal.vendorDirectory.upsert, {
-        placeId: p.id, name: p.displayName.text, area: args.area, category, address: p.formattedAddress ?? '',
-        rating: p.rating ?? 0, ratingCount: p.userRatingCount ?? 0, phone: p.nationalPhoneNumber, mapsUri: p.googleMapsUri,
-      });
-      found++;
-    }
-    await ctx.runMutation(internal.vendorDirectory.markLookup, { area: args.area, category, found });
-    return { found, cached: false };
+    return await lookUp(ctx, args);
   },
+});
+
+/** Same lookup without the sign-in check, for running from the CLI: npx convex run vendorDirectory:lookup '{"area":"Baner","category":"Agricultural Nursery"}' */
+export const lookup = internalAction({
+  args: { area: v.string(), category: v.string() },
+  handler: async (ctx, args) => await lookUp(ctx, args),
 });

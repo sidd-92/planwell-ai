@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import type { Mutate } from '../App';
-import { budgetLineFor, expenseCommitted, fmt, isBooked, paidAmount, vendorCommitted } from '../lib/planner';
+import { addBudgetLine, budgetLineFor, expenseCommitted, fmt, isBooked, paidAmount, removeBudgetLine, vendorCommitted } from '../lib/planner';
 import type { PlanEvent } from '../types';
 
 /** Green when booked, grey when not booked yet. */
@@ -7,7 +8,12 @@ function Dot({ on, label }: { on: boolean; label: string }) {
   return <span role="img" aria-label={label} title={label} style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 999, flex: 'none', background: on ? 'var(--color-accent-2)' : 'color-mix(in srgb, var(--color-text) 25%, transparent)' }} />;
 }
 
-export function BudgetView({ ev, mutate }: { ev: PlanEvent; mutate: Mutate }) {
+export function BudgetView({ ev, mutate, onNotify }: { ev: PlanEvent; mutate: Mutate; onNotify: (message: string) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState('');
+  const [amount, setAmount] = useState('');
+  const [error, setError] = useState('');
+  const [removing, setRemoving] = useState<number | null>(null);
   const $ = (n: number) => fmt(n, ev.currency);
   const bt = ev.budget.reduce((a, r) => a + r.alloc, 0);
   const bc = ev.budget.reduce((a, r) => a + r.spent, 0);
@@ -70,10 +76,42 @@ export function BudgetView({ ev, mutate }: { ev: PlanEvent; mutate: Mutate }) {
                     <button className="btn btn-ghost" style={{ fontSize: 12, padding: '2px 8px' }} onClick={() => mutate((x) => { x.budget[i].spent = vendorCommitted(x, x.budget[i]) + expenseCommitted(x, x.budget[i]); })}>Clear</button>
                   </>
                 )}
+                {r.spent === 0 && ev.budget.length > 1 && (
+                  removing === i ? (
+                    <span className="row" style={{ gap: 4, marginLeft: 'auto' }}>
+                      <button className="btn btn-ghost" style={{ fontSize: 12, padding: '2px 8px' }} onClick={() => { let err = ''; mutate((x) => { err = removeBudgetLine(x, i); }); setRemoving(null); onNotify(err || `Removed ${r.cat}`); }}>Yes, remove</button>
+                      <button className="btn btn-ghost" style={{ fontSize: 12, padding: '2px 8px', color: 'var(--color-text)' }} onClick={() => setRemoving(null)}>Keep</button>
+                    </span>
+                  ) : (
+                    <button className="btn btn-ghost" style={{ fontSize: 12, padding: '2px 8px', marginLeft: 'auto', color: 'var(--color-text)', opacity: 0.7 }} onClick={() => setRemoving(i)}>Remove line</button>
+                  )
+                )}
               </span>
             </div>
           );
         })}
+        {adding ? (
+          <form
+            className="row"
+            style={{ flexWrap: 'wrap', gap: 'var(--space-2)', alignItems: 'flex-end', paddingTop: 'var(--space-3)' }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              let err = '';
+              mutate((x) => { err = addBudgetLine(x, name, +amount); });
+              if (err) { setError(err); return; }
+              onNotify(`Added ${name.trim()}`);
+              setAdding(false); setName(''); setAmount(''); setError('');
+            }}
+          >
+            <div className="field" style={{ flex: '2 1 220px' }}><label htmlFor="bl-name">Budget line</label><input id="bl-name" className="input" autoFocus placeholder="e.g. Permits & municipal fees" value={name} onChange={(e) => { setName(e.target.value); setError(''); }} /></div>
+            <div className="field" style={{ flex: '1 1 140px' }}><label htmlFor="bl-amt">Planned ({ev.currency})</label><input id="bl-amt" className="input" type="number" min={0} step={step} value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+            <button className="btn btn-primary" type="submit" disabled={!name.trim()}>Add line</button>
+            <button className="btn btn-ghost" type="button" onClick={() => { setAdding(false); setError(''); }}>Cancel</button>
+            {error && <p role="alert" style={{ flexBasis: '100%', margin: 0, color: 'var(--color-accent-700)', fontSize: 14 }}>{error}</p>}
+          </form>
+        ) : (
+          <div style={{ paddingTop: 'var(--space-3)' }}><button className="btn btn-secondary" onClick={() => setAdding(true)}>Add budget line</button></div>
+        )}
       </div>
     </div>
   );
