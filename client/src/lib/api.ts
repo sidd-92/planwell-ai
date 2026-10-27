@@ -1,4 +1,4 @@
-import type { ChatRequest, ChatResponse, GeneratedPlan, HealthResponse, IdeasResponse, IntakeRequest, IntakeResponse, PlanRequest, EventContext } from '../../../shared/api';
+import type { ChatRequest, ChatResponse, GeneratedPlan, HealthResponse, IdeaPlan, IdeaPlanRequest, IdeasResponse, IntakeRequest, IntakeResponse, PlanRequest, EventContext } from '../../../shared/api';
 
 // The signed-in user's Convex Auth token, kept current by <AuthTokenSync />.
 let authToken: string | null = null;
@@ -49,3 +49,4 @@ export const draftPlan = (req: PlanRequest) => post<GeneratedPlan>('/api/plan', 
 export const askAssistant = (req: ChatRequest) => post<ChatResponse>('/api/chat', req);
 export const moreIdeas = (event: EventContext) => post<IdeasResponse>('/api/ideas', { event });
 export const intakeTurn = (req: IntakeRequest) => post<IntakeResponse>('/api/intake', req);
+export const planIdea = (req: IdeaPlanRequest) => post<IdeaPlan>('/api/idea-plan', req, 60000);

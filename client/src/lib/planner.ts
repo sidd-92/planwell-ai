@@ -1,4 +1,5 @@
-import type { EventContext, GeneratedPlan, IdeaCategory } from '../../../shared/api';
+import type { EventContext, GeneratedPlan, IdeaCategory, IdeaPlan } from '../../../shared/api';
+import { checkOption, type BudgetRow, type FundingOption } from '../../../shared/ideaPlan';
 import { AI_TASKS, POOL, SHORT, seedEvents } from '../data/seed';
 import type { ActionKey, BudgetLine, Currency, Helper, Idea, Onboarding, Phase, PlanEvent, Vendor } from '../types';
 
@@ -117,6 +118,65 @@ export function removeBudgetLine(ev: PlanEvent, i: number): string {
   if (ev.budget.length <= 1) return 'A budget needs at least one line.';
   ev.vendors.forEach((v) => { if (v.line === line.cat) delete v.line; });
   ev.budget.splice(i, 1);
+  return '';
+}
+
+// ── ideas into the plan ───────────────────────────────────────────────────
+
+/** The budget as the idea planner sees it. A line is "settled" when it has vendors and all are booked. */
+export function budgetRows(ev: PlanEvent): BudgetRow[] {
+  return ev.budget.map((b) => {
+    const mine = ev.vendors.filter((v) => !v.expense && budgetLineFor(ev, v) === b);
+    return { category: b.cat, allocated: b.alloc, committed: b.spent, settled: mine.length > 0 && mine.every(isBooked) };
+  });
+}
+
+/** A basic proposal for when Gemini can't be reached: one task, no cost estimate. */
+export function fallbackIdeaPlan(ev: PlanEvent, title: string): IdeaPlan {
+  const today = isoDay(new Date());
+  const lead = isoDay(new Date(+dParse(ev.date) - 21 * DAY));
+  return {
+    tasks: [{ t: `Plan: ${title}`, due: lead > today ? lead : ev.date }],
+    cost: 0,
+    line: '',
+    rationale: 'No cost estimate is available right now, so this adds the task only. Set any budget by hand on the Budget tab.',
+  };
+}
+
+/**
+ * Works an idea into the plan: adds the chosen tasks to the current phase and, if an option is given, moves
+ * planned money to the idea's budget line (creating the line if needed). Nothing changes unless everything checks out.
+ */
+export function applyIdeaPlan(ev: PlanEvent, ideaIndex: number, plan: IdeaPlan, taskIndexes: number[], option: FundingOption | null): string {
+  const idea = ev.ideas[ideaIndex];
+  if (!idea) return 'That idea no longer exists.';
+  const tasks = taskIndexes.map((i) => plan.tasks[i]).filter(Boolean);
+  const budgeted = !!option && plan.cost > 0;
+  if (!tasks.length && !budgeted) return 'Pick at least one task or a way to fund it.';
+  if (budgeted) {
+    const err = checkOption(budgetRows(ev), plan.cost, option!);
+    if (err) return err;
+    if (!plan.line.trim()) return 'Choose a budget line for this idea.';
+  }
+
+  if (budgeted) {
+    let target = ev.budget.find((b) => b.cat.trim().toLowerCase() === plan.line.trim().toLowerCase());
+    if (!target) {
+      const err = addBudgetLine(ev, plan.line, 0);
+      if (err) return err;
+      target = ev.budget.find((b) => b.cat.trim().toLowerCase() === plan.line.trim().toLowerCase())!;
+    }
+    for (const m of option!.moves) {
+      const from = ev.budget.find((b) => b.cat.trim().toLowerCase() === m.from.trim().toLowerCase())!;
+      from.alloc -= m.amount;
+      target.alloc += m.amount;
+    }
+    target.alloc += option!.raise;
+  }
+  const phase = nowPhase(ev);
+  tasks.forEach((t) => phase.tasks.push({ t: t.t, due: dfmt(t.due), done: false, ai: true }));
+  idea.added = true;
+  delete idea.later;
   return '';
 }
 
@@ -338,7 +398,7 @@ export function applyAction(ev: PlanEvent, key: ActionKey, extraIdeas?: NewIdea[
   if (key === 'guests') {
     if (ev.reminded) return '';
     ev.reminded = true;
-    return `Reminder queued for ${counts(ev).wait} ${ev.type === 'community' ? 'contacts' : 'guests'}`;
+    return `Reminder marked as queued for ${counts(ev).wait} ${ev.type === 'community' ? 'contacts' : 'guests'}. Nothing was sent: sending is coming soon.`;
   }
   if (key === 'ideas') {
     if (ev.applied.ideas) return '';
@@ -395,12 +455,12 @@ export function respondLocally(ev: PlanEvent, text: string): Reply {
   }
   if (has('rsvp', 'guest', 'invite', 'attend', 'remind', 'headcount')) {
     const t = `${c.yes} attending, ${c.no} declined, ${c.wait} yet to reply.`;
-    if (!ev.reminded && c.wait) return { text: t + `\n\nDraft reminder:\n“${reminder(ev)}”`, action: 'guests', label: 'Queue reminder' };
-    return { text: t + (ev.reminded ? ' A reminder is already queued.' : '') };
+    if (!ev.reminded && c.wait) return { text: t + `\n\nDraft reminder:\n“${reminder(ev)}”\n\nNote: the app doesn’t send messages yet. Queueing only marks it; sending by WhatsApp or messaging is coming.`, action: 'guests', label: 'Queue reminder' };
+    return { text: t + (ev.reminded ? ' A reminder is already marked as queued. Nothing was sent: sending is coming soon.' : '') };
   }
   if (has('idea', 'theme', 'decor', 'inspir', 'menu', 'vibe', 'activit')) {
     if (!ev.applied.ideas) return { text: `Three directions based on “${ev.vibe}”:\n` + POOL[ev.type].map((p, k) => `${k + 1}. ${p[0]}: ${p[2]}`).join('\n'), action: 'ideas', label: 'Save to idea board' };
-    return { text: `The board has ${ev.ideas.length} ideas, ${ev.ideas.filter((i) => i.saved).length} saved. The closest fit for “${ev.vibe}” is ${ev.ideas[0]?.title ?? 'still to come'}.` };
+    return { text: `The board has ${ev.ideas.length} ideas, ${ev.ideas.filter((i) => i.saved).length} shortlisted. The closest fit for “${ev.vibe}” is ${ev.ideas[0]?.title ?? 'still to come'}.` };
   }
   if (has('due', 'next', 'task', 'timeline', 'todo', 'to do', 'week', 'when')) {
     const ph = nowPhase(ev);

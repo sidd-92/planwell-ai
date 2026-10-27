@@ -4,6 +4,8 @@ import type {
   ChatResponse,
   EventContext,
   GeneratedPlan,
+  IdeaPlan,
+  IdeaPlanRequest,
   IdeasResponse,
   PlanRequest,
 } from '../../shared/api.js';
@@ -171,6 +173,7 @@ What you can and can't do: you cannot change the plan yourself. You can only ans
 - A cost that isn't a vendor (a permit or fee, printing): Vendors tab, "Add expense", then pick a budget line.
 - A budget amount: Budget tab, edit the "planned" box on that line.
 - A new budget line (for example one for permits): Budget tab, "Add budget line". An unused line can be removed there too.
+- An idea from the Ideas tab: "Add to plan" on the idea. It proposes tasks and a cost, and the planner chooses how to fund it before anything changes. "Shortlist" keeps ideas for the client.
 - A vendor's cost, status or payments: Vendors tab. Tasks: Timeline tab. Giving a task to a helper: Volunteers tab. Guests: Attendees tab.
 Vendors: only recommend or name vendors that appear in the state's "directory" list (real local businesses). Never invent a vendor name; if the directory has none for a category, say so.
 Answer the planner in at most 90 words of plain text (no markdown headings or bold; simple "•" bullets are fine). Use the numbers from the state.
@@ -178,7 +181,7 @@ Set suggestedAction to the one dashboard action that would help right now, or "n
 - "budget": rebalance an over-committed budget line from one with slack
 - "timeline": add three easy-to-miss tasks to the current phase
 - "vendors": shortlist three options for an unbooked vendor
-- "guests": queue an RSVP reminder to people who have not replied
+- "guests": mark an RSVP reminder as queued for people who have not replied. The app does not send messages yet, so say plainly that nothing is sent; sending by WhatsApp or messaging is planned
 - "ideas": generate three more ideas for the idea board`;
   return generateJson<ChatResponse>(prompt, chatSchema, 0.5);
 }
@@ -207,4 +210,52 @@ export async function generateIdeas(ev: EventContext): Promise<IdeasResponse> {
 ${contextBlock(ev)}
 Tune them to the feel "${ev.vibe}" and the location. Titles under 6 words, descriptions one practical sentence. Mix categories.`;
   return generateJson<IdeasResponse>(prompt, ideasSchema, 0.9);
+}
+
+const ideaPlanSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    tasks: {
+      type: Type.ARRAY,
+      items: { type: Type.OBJECT, properties: { taskName: { type: Type.STRING }, deadline: { type: Type.STRING } }, required: ['taskName', 'deadline'] },
+    },
+    estimatedCost: { type: Type.NUMBER },
+    budgetLine: { type: Type.STRING },
+    rationale: { type: Type.STRING },
+  },
+  required: ['tasks', 'estimatedCost', 'budgetLine', 'rationale'],
+};
+
+const isoDay = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(+new Date(v + 'T00:00:00Z'));
+
+/** Works one idea into the plan: a few tasks, a rough cost and the budget line it belongs under. */
+export async function planIdea(req: IdeaPlanRequest, today: string): Promise<IdeaPlan> {
+  const ev = req.event;
+  const prompt = `Turn this idea into part of the plan for the event below.
+Today is ${today}. The event is on ${ev.date}.
+Event state (JSON):
+${contextBlock(ev)}
+
+<user_input>
+Idea: ${req.idea.title} (${req.idea.category}). ${req.idea.description}
+</user_input>
+
+Return:
+- tasks: 1 to 3 concrete tasks that make the idea happen, in order. Each deadline is YYYY-MM-DD, between today and the event date.
+- estimatedCost: a realistic total cost in ${ev.currency} for this event's size in Pune, as a whole number. Use 0 if it is free.
+- budgetLine: the existing budget line it belongs under, copied exactly from the state, or a short new line name (at most 5 words) if none fits.
+- rationale: one sentence saying how you estimated the cost.`;
+  const raw = await generateJson<{ tasks?: { taskName?: unknown; deadline?: unknown }[]; estimatedCost?: unknown; budgetLine?: unknown; rationale?: unknown }>(prompt, ideaPlanSchema, 0.4);
+
+  const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
+  const fallbackDue = ev.date >= today ? ev.date : today;
+  const tasks = (Array.isArray(raw.tasks) ? raw.tasks : [])
+    .map((t) => ({ t: clean(t.taskName, 120), due: isoDay(t.deadline) && (t.deadline as string) >= today && (t.deadline as string) <= fallbackDue ? (t.deadline as string) : fallbackDue }))
+    .filter((t) => t.t)
+    .slice(0, 3);
+  const cost = typeof raw.estimatedCost === 'number' && raw.estimatedCost > 0 ? Math.min(1e7, Math.round(raw.estimatedCost)) : 0;
+  const named = clean(raw.budgetLine, 80);
+  const line = ev.budget.find((b) => b.category.toLowerCase() === named.toLowerCase())?.category ?? named;
+  if (!tasks.length) throw new Error('Gemini returned no tasks.');
+  return { tasks, cost, line: line || req.idea.category, rationale: clean(raw.rationale, 300) };
 }

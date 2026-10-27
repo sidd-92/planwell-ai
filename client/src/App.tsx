@@ -240,7 +240,7 @@ export default function App({ store, user, onSignOut }: { store: EventStore; use
       const n = picks?.names ?? SHORT[cat] ?? SHORT._;
       t = { text: `${cat} is still unbooked with ${weeks} weeks to go. ${picks ? `Top-rated in ${area}` : 'Three options'}: ${n.join(', ')}.`, cta: 'Shortlist all three', key: 'vendors' };
     }
-    if (screen === 'guests' && c.wait && !ev.reminded) t = { text: `${c.wait} ${isComm ? 'contacts' : 'guests'} haven’t replied. I can queue a reminder from ${ev.host} with a reply-by date: “${reminder(ev)}”`, cta: 'Queue reminder', key: 'guests' };
+    if (screen === 'guests' && c.wait && !ev.reminded) t = { text: `${c.wait} ${isComm ? 'contacts' : 'guests'} haven’t replied. I can queue a reminder from ${ev.host} with a reply-by date: “${reminder(ev)}” Heads up: the app doesn’t send anything yet. Sending by WhatsApp or messaging is coming, so for now this only marks the reminder as queued.`, cta: 'Queue reminder', key: 'guests' };
     if (screen === 'ideas' && !ev.applied.ideas) t = { text: `These are tuned to “${ev.vibe}”. Want three more directions${ai.online ? ' from Gemini' : ''}?`, cta: ideaLoading ? 'Generating…' : 'Generate 3 more', key: 'ideas' };
     return t ? { ...t, dkey } : null;
   }, [ev, screen, dismissed, weeks, isComm, ideaLoading, ai.online, picks, area]);
@@ -274,7 +274,7 @@ export default function App({ store, user, onSignOut }: { store: EventStore; use
       )}
 
       <main className="main">
-        <div className="main-inner">
+        <div className={`main-inner${screen === 'vendors' || screen === 'guests' ? ' wide' : ''}`}>
           {narrow && (
             <div className="topbar">
               <button className="btn btn-secondary" onClick={() => setSwitcher(true)}><UpDown />All events</button>
@@ -337,7 +337,7 @@ export default function App({ store, user, onSignOut }: { store: EventStore; use
           {screen === 'vendors' && <VendorsView ev={ev} mutate={mutate} onNotify={toast} />}
           {screen === 'guests' && <GuestsView key={ev.id} ev={ev} mutate={mutate} onNotify={toast} />}
           {screen === 'volunteers' && <VolunteersView key={ev.id} ev={ev} mutate={mutate} onNotify={toast} />}
-          {screen === 'ideas' && <IdeasView ev={ev} mutate={mutate} />}
+          {screen === 'ideas' && <IdeasView ev={ev} mutate={mutate} ai={ai} onNotify={toast} />}
         </div>
       </main>
 

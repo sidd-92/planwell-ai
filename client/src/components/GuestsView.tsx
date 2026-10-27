@@ -90,6 +90,10 @@ export function GuestsView({ ev, mutate, onNotify }: { ev: PlanEvent; mutate: Mu
 
   return (
     <div className="col" style={{ gap: 'var(--space-6)' }}>
+      <div className="row" style={{ gap: 'var(--space-2)', fontSize: 13, flexWrap: 'wrap' }} role="note">
+        <span className="tag tag-outline">Coming soon</span>
+        <span className="text-muted">Invites and reminders aren’t sent by the app yet. Sending by WhatsApp or messaging is planned.</span>
+      </div>
       <div className="stats" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
         {([['Invited', c.invited], ['Attending', c.yes], ['Declined', c.no], ['Awaiting', c.wait]] as const).map(([l, v]) => (
           <div key={l} className="col"><span className="text-muted stat-label">{l}</span><span className="stat-num">{v.toLocaleString('en-US')}</span></div>
