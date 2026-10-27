@@ -274,7 +274,7 @@ export default function App({ store, user, onSignOut }: { store: EventStore; use
       )}
 
       <main className="main">
-        <div className="main-inner">
+        <div className={`main-inner${screen === 'vendors' || screen === 'guests' ? ' wide' : ''}`}>
           {narrow && (
             <div className="topbar">
               <button className="btn btn-secondary" onClick={() => setSwitcher(true)}><UpDown />All events</button>
