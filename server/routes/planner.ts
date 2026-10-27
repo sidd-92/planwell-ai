@@ -1,9 +1,9 @@
 import { Router, type Request, type Response } from 'express';
-import type { ChatRequest, HealthResponse, IdeasRequest, IntakeRequest, PlanRequest } from '../../shared/api.js';
+import type { ChatRequest, HealthResponse, IdeaPlanRequest, IdeasRequest, IntakeRequest, PlanRequest } from '../../shared/api.js';
 import { areaFromLocation } from '../../shared/areas.js';
 import { convexUrl, requireAuth } from '../auth.js';
 import { cleanAnswers, intakeTurn } from '../services/intake.js';
-import { MODEL, aiConfigured, chatReply, generateEventPlan, generateIdeas } from '../services/vertexAi.js';
+import { MODEL, aiConfigured, chatReply, generateEventPlan, generateIdeas, planIdea } from '../services/vertexAi.js';
 
 export const plannerRouter = Router();
 
@@ -112,6 +112,25 @@ plannerRouter.post('/intake', requireAuth, async (req: Request, res: Response) =
   try {
     const history = Array.isArray(b?.history) ? b.history.slice(-6).map((m) => ({ role: m.role === 'ai' ? ('ai' as const) : ('user' as const), text: str(m.text, 500) })) : [];
     res.json(await intakeTurn({ todayDate: today, answers: cleanAnswers(b?.answers, today), history, message }));
+  } catch (err) {
+    fail(res, err);
+  }
+});
+
+plannerRouter.post('/idea-plan', requireAuth, async (req: Request, res: Response) => {
+  const b = req.body as Partial<IdeaPlanRequest>;
+  const title = str(b?.idea?.title, 120);
+  if (!b?.event || !title) {
+    res.status(400).json({ error: 'event and idea are required.' });
+    return;
+  }
+  if (!aiConfigured()) {
+    res.status(503).json({ error: 'Vertex AI is not configured on this server.' });
+    return;
+  }
+  try {
+    const idea = { title, category: str(b.idea?.category, 40), description: str(b.idea?.description, 400) };
+    res.json(await planIdea({ event: b.event, idea }, new Date().toISOString().slice(0, 10)));
   } catch (err) {
     fail(res, err);
   }
