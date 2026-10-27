@@ -181,7 +181,7 @@ Set suggestedAction to the one dashboard action that would help right now, or "n
 - "budget": rebalance an over-committed budget line from one with slack
 - "timeline": add three easy-to-miss tasks to the current phase
 - "vendors": shortlist three options for an unbooked vendor
-- "guests": queue an RSVP reminder to people who have not replied
+- "guests": mark an RSVP reminder as queued for people who have not replied. The app does not send messages yet, so say plainly that nothing is sent; sending by WhatsApp or messaging is planned
 - "ideas": generate three more ideas for the idea board`;
   return generateJson<ChatResponse>(prompt, chatSchema, 0.5);
 }

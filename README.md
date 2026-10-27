@@ -174,6 +174,7 @@ The deploy job runs in the `prod` environment. In that environment's settings, s
 
 ## Assumptions
 
+- Invites and reminders aren't sent yet. **Queue reminder** only marks a reminder as queued, and the app says so. Sending by WhatsApp or messaging is planned.
 - Events are limited to a few Pune areas to keep Places usage and cost small. To add an area or category, edit `shared/areas.ts` and run the seed again.
 - Vendor data is a snapshot from Google Places. It can go stale, and it has no prices or availability, so the cost field is entered by hand.
 - Currency is USD or INR per event (INR by default), picked during setup. Amounts are formatted for that locale (₹5,00,000 or $35,000).
