@@ -31,7 +31,7 @@ AI-assisted event planner (weddings, birthdays, community events). React + Vite 
 - **Guest import.** `lib/guestImport.ts` parses a `.xlsx` (via `read-excel-file`, loaded on demand) or `.csv` into guests; columns are No, Name, Contact, Email, Address 1, Address 2, Pincode, matched by header wording. Rows with any detail are added (half-filled is fine), rows with only a number are added as blank entries at the end, fully empty rows are ignored, and rows matching an existing name and contact are skipped. The toast reads `added/total rows were added`. The new guest fields are optional in `convex/validators.ts`, so older events still load.
 - **Edit and delete.** `EventDialogs.tsx` and the header buttons in `App.tsx`. `events.remove` refuses to delete a user's last event, because an empty list triggers the sample-event re-seed.
 - **Offline fallback.** If Vertex AI is unavailable the client uses the rules engine in `planner.ts`. Keep that path working when you change an AI feature.
-- **Auth.** Convex Auth, password provider only. Forgot password emails a 6-digit code through Resend (`convex/ResetEmail.ts`; Convex env `AUTH_RESEND_KEY`, optional `AUTH_EMAIL_FROM`). Every Convex function requires a session. `/api/plan`, `/api/chat` and `/api/ideas` verify the Convex token in `server/auth.ts`.
+- **Auth.** Convex Auth, password provider only. Every Convex function requires a session. `/api/plan`, `/api/chat` and `/api/ideas` verify the Convex token in `server/auth.ts`.
 - **Pune areas only.** New events must be in one of `PUNE_AREAS` (`shared/areas.ts`). The dropdown, `POST /api/plan` and `events.create` all enforce it. The sample events (`events.seed`) are outside Pune and are deliberately exempt.
 
 ## Vendor directory
