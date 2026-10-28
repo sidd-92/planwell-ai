@@ -91,6 +91,15 @@ export interface Helper {
   contact?: string;
 }
 
+/** A person who contributed to a community event. How much each gave isn't tracked. */
+export interface Contributor {
+  id: string;
+  name: string;
+  phone?: string;
+  /** Anything that tells people apart: a flat, a lane, a group. */
+  detail?: string;
+}
+
 export interface PlanEvent {
   id: string;
   type: EventType;
@@ -115,6 +124,12 @@ export interface PlanEvent {
   chat: ChatMsg[];
   aiDrafted?: boolean;
   helpers?: Helper[];
+  /** Community events only. */
+  contributors?: Contributor[];
+  /** Total collected, entered as one number. */
+  collected?: number;
+  /** Part of `collected` already added to budget lines. */
+  earmarked?: number;
 }
 
 export interface Onboarding {
