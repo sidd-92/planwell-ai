@@ -91,13 +91,13 @@ export interface Helper {
   contact?: string;
 }
 
-/** Money a community event collects from residents or members. */
-export interface Contribution {
+/** A person who contributed to a community event. How much each gave isn't tracked. */
+export interface Contributor {
   id: string;
   name: string;
-  /** Flat or unit number, so two residents with the same name stay distinct. */
-  unit?: string;
-  amount: number;
+  phone?: string;
+  /** Anything that tells people apart: a flat, a lane, a group. */
+  detail?: string;
 }
 
 export interface PlanEvent {
@@ -125,7 +125,11 @@ export interface PlanEvent {
   aiDrafted?: boolean;
   helpers?: Helper[];
   /** Community events only. */
-  contributions?: Contribution[];
+  contributors?: Contributor[];
+  /** Total collected, entered as one number. */
+  collected?: number;
+  /** Part of `collected` already added to budget lines. */
+  earmarked?: number;
 }
 
 export interface Onboarding {

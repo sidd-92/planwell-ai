@@ -197,19 +197,44 @@ export function addHelper(ev: PlanEvent, name: string, contact: string): string 
   return '';
 }
 
-/** Records money collected for a community event. Returns an error message, or '' on success. */
-export function addContribution(ev: PlanEvent, name: string, unit: string, amount: number): string {
+/** Adds someone who contributed to a community event. Returns an error message, or '' on success. */
+export function addContributor(ev: PlanEvent, name: string, phone: string, detail: string): string {
   const n = name.trim().slice(0, 60);
   if (!n) return 'Enter a name.';
-  if (!Number.isFinite(amount) || amount <= 0) return 'Enter an amount above zero.';
-  const list = (ev.contributions ??= []);
-  if (list.length >= 500) return 'An event can hold up to 500 contributions.';
-  list.push({ id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: n, unit: unit.trim().slice(0, 20) || undefined, amount: Math.round(amount) });
+  const list = (ev.contributors ??= []);
+  if (list.length >= 500) return 'An event can hold up to 500 contributors.';
+  list.push({ id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: n, phone: phone.trim().slice(0, 40) || undefined, detail: detail.trim().slice(0, 40) || undefined });
   return '';
 }
 
-export function removeContribution(ev: PlanEvent, id: string) {
-  ev.contributions = (ev.contributions ?? []).filter((c) => c.id !== id);
+export function removeContributor(ev: PlanEvent, id: string) {
+  ev.contributors = (ev.contributors ?? []).filter((c) => c.id !== id);
+}
+
+/** Collected money not yet added to a budget line. */
+export function contributionLeft(ev: PlanEvent): number {
+  return Math.max(0, (ev.collected ?? 0) - (ev.earmarked ?? 0));
+}
+
+/** Suggested split of what's left: cover lines that are over budget first, nothing more. */
+export function suggestContributionSplit(ev: PlanEvent): number[] {
+  let left = contributionLeft(ev);
+  return ev.budget.map((r) => {
+    const give = Math.min(left, Math.max(0, r.spent - r.alloc));
+    left -= give;
+    return give;
+  });
+}
+
+/** Adds contribution money to budget lines (raising their planned amounts). Returns an error message, or '' on success. */
+export function applyContributionSplit(ev: PlanEvent, amounts: number[]): string {
+  const total = amounts.reduce((a, n) => a + n, 0);
+  if (amounts.some((n) => !Number.isFinite(n) || n < 0)) return 'Amounts can’t be negative.';
+  if (total <= 0) return 'Enter an amount for at least one line.';
+  if (total > contributionLeft(ev)) return 'That is more than the contributions left.';
+  amounts.forEach((n, i) => { if (n > 0 && ev.budget[i]) ev.budget[i].alloc += Math.round(n); });
+  ev.earmarked = (ev.earmarked ?? 0) + Math.round(total);
+  return '';
 }
 
 /** Removes a volunteer and unassigns their tasks. */
@@ -601,6 +626,9 @@ export function toContext(ev: PlanEvent, directory?: EventContext['directory']):
     rsvp: { attending: c.yes, declined: c.no, awaiting: c.wait },
     ideas: ev.ideas.map((i) => i.title).slice(0, 12),
     directory,
+    contributions: ev.type === 'community'
+      ? { collected: ev.collected ?? 0, left: contributionLeft(ev), contributors: (ev.contributors ?? []).length, recent: (ev.contributors ?? []).slice(-3).map((c) => c.name) }
+      : undefined,
   };
 }
 

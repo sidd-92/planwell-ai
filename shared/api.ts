@@ -59,6 +59,8 @@ export interface EventContext {
   ideas: string[];
   /** Real local vendors (Google Places directory). The only vendors the assistant may name. */
   directory?: { category: string; name: string; rating: number }[];
+  /** Community events only: money collected and the people who gave it. */
+  contributions?: { collected: number; left: number; contributors: number; recent: string[] };
 }
 
 export interface ChatRequest {
