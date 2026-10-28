@@ -20,7 +20,7 @@ PromptWars · Challenge 5: Celebration & Event Planner
 1. **New event.** Pick a mode. **AI-guided** is a short chat: Gemini reads each free-text answer, and the server checks the values and asks the next question (type, client, name, date, Pune area, guests, budget, priorities, feel). **Manual setup** is a three-step form that starts from a template plan. Either way the plan is drafted and shown for **review** first. Nothing is created until the planner clicks **Approve plan**; **Change answers** shows every question with its answer for editing, then redrafts. Events can only be created in the supported Pune areas.
 2. **Draft.** `POST /api/plan` sends those answers to Gemini with a strict schema. The server returns the plan, and the client normalises it: budget lines are scaled to add up exactly to the total, and phases are dated relative to the event.
 3. **Dashboard.** Seven tabs: Overview (weekly briefing, next tasks, budget, vendors, RSVPs), Budget (editable allocations, add or remove budget lines, overage flags), Timeline (phases, tasks you can tick off or add), Vendors (real local vendors you can browse and choose, an editable cost and budget line, and a status you can click to advance; a Contacted, Booked or paid vendor's cost counts as committed on its budget line). You can also **Add expense** for costs that aren't a vendor (a permit fee, printing); each is a labelled row counted against a budget line. Booked vendors can then move to **Advance paid** (you enter the amount; the balance is shown as due after the event) and **Fully paid**. Payments are final: a paid vendor can't go back to an earlier stage, and Fully paid is the last stage, Volunteers (add friends and relatives who are helping and assign them timeline tasks; they aren't notified by the app yet, so you copy their task list or open a prefilled WhatsApp message), Guests (RSVP tracking, search, add guests, and upload a `.xlsx` or `.csv` guest list; every cell is editable in the table) and Ideas (a filterable idea board: shortlist ideas for the client and print the shortlist, or work an idea into the plan: Gemini proposes tasks, a cost and a budget line, you choose how to fund it from options calculated from your budget, and nothing changes until you confirm).
-4. **Edit and delete.** *Edit* in the event header changes the name, client, date, area, guest count and feel. *Delete* asks for confirmation. The last remaining event can't be deleted, because an empty account is re-seeded with the sample events.
+4. **Edit and delete.** *Edit* in the event header changes the name, client, date, area, guest count and feel. *Delete* asks for confirmation. Deleting the last event returns to the empty start screen.
 5. **Assistant.** `POST /api/chat` answers questions about the plan and suggests one action. `POST /api/ideas` adds three new ideas to the board. `POST /api/intake` runs one turn of the AI-guided new-event chat. Each tab also shows an inline suggestion when one applies.
 
 ```
@@ -33,7 +33,7 @@ React (Vite) ───┤
 ### Persistence (Convex)
 
 - `convex/schema.ts`: Convex Auth's tables, an `events` table indexed by `userId`, and the `vendorDirectory` table. Each event's plan (budget, phases, vendors, guests, ideas, chat) lives in a typed `data` field, validated by `convex/validators.ts`.
-- `convex/events.ts`: `list` (live query), `seed` (sample events for a new account), `create` (rejects locations outside the Pune areas), `save` and `remove`. Every function reads the user from the session; a user can only read or change their own events.
+- `convex/events.ts`: `list` (live query), `create` (rejects locations outside the Pune areas), `save` and `remove`. Every function reads the user from the session; a user can only read or change their own events.
 
 ### Vendor directory (Google Places)
 
@@ -59,6 +59,15 @@ npx convex run vendorDirectory:seed '{"only":"Rentals"}'     # optional: one cat
 - Signed-out visitors see only the sign-in screen. Every Convex query and mutation requires a session.
 - The Gemini endpoints (`/api/plan`, `/api/chat`, `/api/ideas`) also require sign-in: the browser sends its Convex Auth token, and Express verifies it against the deployment's public keys (`/.well-known/jwks.json`, issuer = the Convex site URL, audience `convex`) before calling Vertex AI. See `server/auth.ts`.
 
+### Demo account
+
+To try the app without signing up, use **Create account** once with the details below, then sign in with them. New accounts start empty: create an event to begin.
+
+- Email: `sid@event.com`
+- Password: `123456789`
+
+This is a throwaway demo login. Don't reuse the password anywhere else.
+
 ## Project layout
 
 ```
@@ -67,7 +76,7 @@ npx convex run vendorDirectory:seed '{"only":"Rentals"}'     # optional: one cat
 ├── convex/
 │   ├── schema.ts             events table + index
 │   ├── validators.ts         strict validator for an event's plan data
-│   ├── events.ts             list / seed / create / save / remove (per user)
+│   ├── events.ts             list / create / save / remove (per user)
 │   ├── vendorDirectory.ts    Places-backed vendor directory: seed action, byArea and browse queries
 │   ├── auth.ts, auth.config.ts, http.ts   Convex Auth: password provider + HTTP routes
 │   ├── users.ts              current user's email
@@ -181,6 +190,6 @@ The deploy job runs in the `prod` environment. In that environment's settings, s
 - Gemini's budget lines are re-scaled on the client so they always add up exactly to the stated total.
 - RSVP totals combine named guests with a count imported from the client's list.
 - Accounts are email + password only, with no email verification or password reset (both can be added to the Password provider later).
-- A new account starts with three sample events so the dashboard has something to show.
+- A new account starts with no events and goes straight to creating one.
 - When two devices edit the same event at the same moment, the last save wins for that event.
 - The UI uses the "Organic" design system from the Claude Design project: Caprasimo and Figtree from Google Fonts, plain CSS tokens and no CSS framework.

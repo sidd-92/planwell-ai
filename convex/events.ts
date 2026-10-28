@@ -35,23 +35,6 @@ export const list = query({
   },
 });
 
-/** Gives a new account the sample events. Does nothing if the user already has events. */
-export const seed = mutation({
-  args: { events: v.array(eventData) },
-  handler: async (ctx, args) => {
-    const userId = await requireUser(ctx);
-    const existing = await ctx.db
-      .query('events')
-      .withIndex('by_user', (q) => q.eq('userId', userId))
-      .first();
-    if (existing) return 0;
-    for (const data of args.events.slice(0, 10)) {
-      await ctx.db.insert('events', { userId, data });
-    }
-    return args.events.length;
-  },
-});
-
 /** Adds a new event (from the onboarding flow) and returns its id. */
 export const create = mutation({
   args: { data: eventData },
@@ -82,10 +65,7 @@ export const save = mutation({
 export const remove = mutation({
   args: { id: v.id('events') },
   handler: async (ctx, args) => {
-    const doc = await owned(ctx, args.id);
-    // An empty account would be re-seeded with the sample events, so the last event stays.
-    const mine = await ctx.db.query('events').withIndex('by_user', (q) => q.eq('userId', doc.userId)).take(2);
-    if (mine.length < 2) throw new ConvexError('Keep at least one event. Create another before deleting this one.');
+    await owned(ctx, args.id);
     await ctx.db.delete(args.id);
   },
 });

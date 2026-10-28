@@ -301,7 +301,7 @@ export default function App({ store, user, onSignOut }: { store: EventStore; use
               <div className="col"><span className="big-num">{days}</span><span className="text-muted" style={{ fontSize: 12 }}>days to go</span></div>
               <div className="row" style={{ gap: 'var(--space-1)' }}>
                 <button className="btn btn-ghost" onClick={() => setEditing(true)}>Edit</button>
-                <button className="btn btn-ghost" onClick={() => setDeleting({ busy: false, error: events.length < 2 ? 'This is your only event. Create another before deleting it.' : '' })}>Delete</button>
+                <button className="btn btn-ghost" onClick={() => setDeleting({ busy: false, error: '' })}>Delete</button>
               </div>
               {!narrow && (
                 <button className="btn btn-secondary" onClick={() => setChatOpen(!chatOpen)}><Sparkle />{chatOpen ? 'Hide assistant' : 'Assistant'}</button>
@@ -374,7 +374,6 @@ export default function App({ store, user, onSignOut }: { store: EventStore; use
           error={deleting.error}
           onClose={() => setDeleting(null)}
           onConfirm={() => {
-            if (events.length < 2) return;
             const id = ev.id;
             const nextId = events.find((e) => e.id !== id)?.id ?? '';
             setDeleting({ busy: true, error: '' });
