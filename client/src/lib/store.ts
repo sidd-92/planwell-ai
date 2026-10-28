@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 import type { PlanEvent } from '../types';
-import { initialEvents } from './planner';
 
 /** The signed-in user's events, stored in Convex. */
 export interface EventStore {
@@ -43,7 +42,6 @@ function applyTo(list: PlanEvent[], id: string, fn: (ev: PlanEvent) => string | 
 /** Use only inside a signed-in part of the tree. */
 export function useConvexStore(): EventStore {
   const docs = useQuery(api.events.list, {});
-  const seed = useMutation(api.events.seed);
   const create = useMutation(api.events.create);
   const save = useMutation(api.events.save).withOptimisticUpdate((local, args) => {
     const cur = local.getQuery(api.events.list, {});
@@ -51,7 +49,7 @@ export function useConvexStore(): EventStore {
   });
   const removeDoc = useMutation(api.events.remove).withOptimisticUpdate((local, args) => {
     const cur = local.getQuery(api.events.list, {});
-    if (cur && cur.length > 1) local.setQuery(api.events.list, {}, cur.filter((d) => d._id !== args.id));
+    if (cur) local.setQuery(api.events.list, {}, cur.filter((d) => d._id !== args.id));
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -64,18 +62,6 @@ export function useConvexStore(): EventStore {
     seenDocs.current = docs;
     latest.current = events;
   }
-
-  // A new account starts with the sample events (the server ignores this if it already has some).
-  const seeding = useRef(false);
-  useEffect(() => {
-    if (docs && docs.length === 0 && !seeding.current) {
-      seeding.current = true;
-      seed({ events: initialEvents().map(toData) }).catch(() => {
-        seeding.current = false;
-        setError('Couldn’t set up your account. Check your connection.');
-      });
-    }
-  }, [docs, seed]);
 
   const update = useCallback<EventStore['update']>((id, fn) => {
     const { next, ev, result } = applyTo(latest.current, id, fn);
@@ -97,7 +83,7 @@ export function useConvexStore(): EventStore {
   }, [removeDoc]);
 
   return {
-    ready: !!docs && docs.length > 0,
+    ready: !!docs,
     events,
     update,
     add,
