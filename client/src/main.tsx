@@ -5,6 +5,7 @@ import { ConvexAuthProvider, useAuthActions, useAuthToken, useConvexAuth } from 
 import { api } from '../../convex/_generated/api';
 import App from './App';
 import { AuthScreen } from './components/AuthScreen';
+import { Welcome } from './components/Welcome';
 import { useConvexStore } from './lib/store';
 import { fetchConfig, setAuthToken } from './lib/api';
 import './styles/organic.css';
@@ -33,6 +34,7 @@ function SignedIn() {
   const me = useQuery(api.users.me, {});
   const { signOut } = useAuthActions();
   if (!store.ready) return <Splash message="Loading your events…" />;
+  if (store.events.length === 0) return <Welcome store={store} onSignOut={() => void signOut()} />;
   return <App store={store} user={me?.email ?? ''} onSignOut={() => void signOut()} />;
 }
 
