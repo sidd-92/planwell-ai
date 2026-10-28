@@ -59,6 +59,15 @@ npx convex run vendorDirectory:seed '{"only":"Rentals"}'     # optional: one cat
 - Signed-out visitors see only the sign-in screen. Every Convex query and mutation requires a session.
 - The Gemini endpoints (`/api/plan`, `/api/chat`, `/api/ideas`) also require sign-in: the browser sends its Convex Auth token, and Express verifies it against the deployment's public keys (`/.well-known/jwks.json`, issuer = the Convex site URL, audience `convex`) before calling Vertex AI. See `server/auth.ts`.
 
+### Demo account
+
+To try the app without signing up, use **Create account** once with the details below, then sign in with them. New accounts start with sample events.
+
+- Email: `sid@event.com`
+- Password: `123456789`
+
+This is a throwaway demo login. Don't reuse the password anywhere else.
+
 ## Project layout
 
 ```
