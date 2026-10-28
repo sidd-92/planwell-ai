@@ -13,6 +13,8 @@ const task = v.object({
 
 const helper = v.object({ id: v.string(), name: v.string(), contact: v.optional(v.string()) });
 
+const contribution = v.object({ id: v.string(), name: v.string(), unit: v.optional(v.string()), amount: v.number() });
+
 const phase = v.object({
   label: v.string(),
   range: v.string(),
@@ -95,4 +97,5 @@ export const eventData = v.object({
   chat: v.array(chatMsg),
   aiDrafted: v.optional(v.boolean()),
   helpers: v.optional(v.array(helper)),
+  contributions: v.optional(v.array(contribution)),
 });

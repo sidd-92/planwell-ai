@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Mutate } from '../App';
 import { addBudgetLine, budgetLineFor, expenseCommitted, fmt, isBooked, paidAmount, removeBudgetLine, vendorCommitted } from '../lib/planner';
 import type { PlanEvent } from '../types';
+import { ContributionsPanel } from './ContributionsPanel';
 
 /** Green when booked, grey when not booked yet. */
 function Dot({ on, label }: { on: boolean; label: string }) {
@@ -113,6 +114,7 @@ export function BudgetView({ ev, mutate, onNotify }: { ev: PlanEvent; mutate: Mu
           <div style={{ paddingTop: 'var(--space-3)' }}><button className="btn btn-secondary" onClick={() => setAdding(true)}>Add budget line</button></div>
         )}
       </div>
+      {ev.type === 'community' && <ContributionsPanel ev={ev} mutate={mutate} onNotify={onNotify} committed={bc} />}
     </div>
   );
 }

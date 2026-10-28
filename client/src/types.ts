@@ -91,6 +91,15 @@ export interface Helper {
   contact?: string;
 }
 
+/** Money a community event collects from residents or members. */
+export interface Contribution {
+  id: string;
+  name: string;
+  /** Flat or unit number, so two residents with the same name stay distinct. */
+  unit?: string;
+  amount: number;
+}
+
 export interface PlanEvent {
   id: string;
   type: EventType;
@@ -115,6 +124,8 @@ export interface PlanEvent {
   chat: ChatMsg[];
   aiDrafted?: boolean;
   helpers?: Helper[];
+  /** Community events only. */
+  contributions?: Contribution[];
 }
 
 export interface Onboarding {

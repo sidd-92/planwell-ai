@@ -197,6 +197,21 @@ export function addHelper(ev: PlanEvent, name: string, contact: string): string 
   return '';
 }
 
+/** Records money collected for a community event. Returns an error message, or '' on success. */
+export function addContribution(ev: PlanEvent, name: string, unit: string, amount: number): string {
+  const n = name.trim().slice(0, 60);
+  if (!n) return 'Enter a name.';
+  if (!Number.isFinite(amount) || amount <= 0) return 'Enter an amount above zero.';
+  const list = (ev.contributions ??= []);
+  if (list.length >= 500) return 'An event can hold up to 500 contributions.';
+  list.push({ id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: n, unit: unit.trim().slice(0, 20) || undefined, amount: Math.round(amount) });
+  return '';
+}
+
+export function removeContribution(ev: PlanEvent, id: string) {
+  ev.contributions = (ev.contributions ?? []).filter((c) => c.id !== id);
+}
+
 /** Removes a volunteer and unassigns their tasks. */
 export function removeHelper(ev: PlanEvent, id: string) {
   ev.phases.forEach((p) => p.tasks.forEach((t) => { if (t.assignee === id) delete t.assignee; }));
